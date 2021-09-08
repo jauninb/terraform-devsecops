@@ -1,0 +1,21 @@
+version: '1'
+
+static-scan:
+  image: tfsec/tfsec-ci
+  script: |
+    #!/bin/sh
+    if [[ "$PIPELINE_DEBUG" == 1 ]]; then
+     trap env EXIT
+     env
+     set -x
+    fi
+    pwd
+
+    list_repos | while IFS= read -r repo ; do
+      url="$(load_repo "$repo" url)"
+      sha="$(load_repo "$repo" commit)"
+      branch="$(load_repo "$repo" branch)"
+      path="$(load_repo "$repo" path)"
+
+      echo "repo=$repo url=$url sha=$sha branch=$branch path=$path"
+    done
