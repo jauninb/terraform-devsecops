@@ -1,5 +1,12 @@
 version: '1'
 
+test:
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12
+  script: |
+    #!/usr/bin/env bash
+    echo "Do nothing yet"
+
 static-scan:
   image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12
   script: |
@@ -15,7 +22,7 @@ static-scan:
       tfsec --version
     else 
       echo "Installing tfsec"
-      curl -sL https://github.com/aquasecurity/tfsec/releases/download/v0.58.6/tfsec-linux-amd64 -o /usr/bin/tfsec | chmod +x /usr/bin/tfsec
+      curl -sL https://github.com/aquasecurity/tfsec/releases/download/v0.58.6/tfsec-linux-amd64 -o /usr/bin/tfsec && chmod +x /usr/bin/tfsec
       tfsec --version
     fi
 
