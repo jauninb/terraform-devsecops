@@ -1,15 +1,24 @@
 version: '1'
 
 static-scan:
-  image: tfsec/tfsec-ci
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12
   script: |
-    #!/bin/sh
+    #!/bin/bash
     if [[ "$PIPELINE_DEBUG" == 1 ]]; then
      trap env EXIT
      env
      set -x
     fi
     pwd
+
+    if which tfsec > /dev/null 2>&1; then
+      tfsec --version
+    else 
+      echo "Installing tfsec"
+      curl -sL https://github.com/aquasecurity/tfsec/releases/download/v0.58.6/tfsec-linux-amd64 -o /usr/bin/tfsec | chmod +x /usr/bin/tfsec
+      tfsec --version
+    fi
+
 
     list_repos | while IFS= read -r repo ; do
       url="$(load_repo "$repo" url)"
@@ -18,4 +27,12 @@ static-scan:
       path="$(load_repo "$repo" path)"
 
       echo "repo=$repo url=$url sha=$sha branch=$branch path=$path"
+
+      tf_vars_file=$(get_env tf_vars_file "")
+      if [[ "$tf_vars_file" != "" ]]; then
+        export VAR_FILE_ARG=" --tfvars-file ${WORKSPACE}/${path}/$tf_vars_file"
+      fi
+
+      echo "tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG"
+      tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG 
     done
