@@ -26,6 +26,8 @@ static-scan:
       tfsec --version
     fi
 
+    TF_STATIC_SCAN_STATUS="${WORKSPACE}/tf-static-scan-status"
+    touch "${TF_STATIC_SCAN_STATUS}"
 
     list_repos | while IFS= read -r repo ; do
       url="$(load_repo "$repo" url)"
@@ -42,4 +44,19 @@ static-scan:
 
       echo "tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG"
       tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG 
+      exit_code=$?
+      if [ $exit_code -ne 0 ]; then
+        echo "failure" >> "${TF_STATIC_SCAN_STATUS}"
+      fi
     done
+
+    echo "exiting accordingly"
+    #
+    # check if any of the scans failed
+    #
+    if [ "$(cat "${TF_STATIC_SCAN_STATUS}")" = "failure" ]; then
+        TF_STATIC_SCAN_RESULTS_STATUS="failure"
+        exit 1
+    else
+        TF_STATIC_SCAN_RESULTS_STATUS="success"
+    fi
