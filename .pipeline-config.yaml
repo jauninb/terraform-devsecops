@@ -8,6 +8,7 @@ test:
     echo "Do nothing yet"
 
 static-scan:
+  abort_on_failure: false
   image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12
   script: |
     #!/bin/bash
@@ -29,6 +30,9 @@ static-scan:
     TF_STATIC_SCAN_STATUS="${WORKSPACE}/tf-static-scan-status"
     touch "${TF_STATIC_SCAN_STATUS}"
 
+    mkdir -p "${WORKSPACE}/__tfsec_scan__"
+    TFSEC_DIR="${WORKSPACE}/__tfsec_scan__"
+
     list_repos | while IFS= read -r repo ; do
       url="$(load_repo "$repo" url)"
       sha="$(load_repo "$repo" commit)"
@@ -43,11 +47,15 @@ static-scan:
       fi
 
       echo "tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG"
+      tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG --format json > "${TFSEC_DIR}/${repo}_tfsec_out.json"
       tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG 
       exit_code=$?
       if [ $exit_code -ne 0 ]; then
         echo "failure" >> "${TF_STATIC_SCAN_STATUS}"
       fi
+
+      save_result static-scan "${TFSEC_DIR}/${repo}_tfsec_out.json"
+
     done
 
     echo "exiting accordingly"
