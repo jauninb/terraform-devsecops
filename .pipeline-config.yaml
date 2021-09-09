@@ -95,21 +95,22 @@ static-scan:
         export VAR_FILE_ARG=" --tfvars-file ${WORKSPACE}/${path}/$tf_vars_file"
       fi
 
+      tfsec_out_file_path="${TFSEC_DIR}/${repo}_tfsec_out.xml"
       echo "tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG"
-      tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG --format junit > "${TFSEC_DIR}/${repo}_tfsec_out"
+      tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG --format junit > "${tfsec_out_file_path}"
       tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG 
       exit_code=$?
       if [ $exit_code -ne 0 ]; then
         echo "failure" >> "${TF_STATIC_SCAN_STATUS}"
       fi
 
-      save_result static-scan "${TFSEC_DIR}/${repo}_tfsec_out"
+      save_result static-scan "${tfsec_out_file_path}"
 
       ibmcloud doi publishtestrecord \
         --toolchainid="$DOI_TOOLCHAIN_ID" \
         --logicalappname="$logicalappname" \
         --buildnumber="$buildnumber" \
-        --filelocation="${TFSEC_DIR}/${repo}_tfsec_out" \
+        --filelocation="${tfsec_out_file_path}" \
         --type="${dataset_name}" \
         --drilldownurl="${url}" \
         --env "${environment}" || return 0
