@@ -17,8 +17,14 @@ static-scan:
      env
      set -x
     fi
-    pwd
 
+    TF_STATIC_SCAN_STATUS="${WORKSPACE}/tf-static-scan-status"
+    touch "${TF_STATIC_SCAN_STATUS}"
+
+    mkdir -p "${WORKSPACE}/__tfsec_scan__"
+    TFSEC_DIR="${WORKSPACE}/__tfsec_scan__"
+
+    # Install TFSec tool
     if which tfsec > /dev/null 2>&1; then
       tfsec --version
     else 
@@ -27,19 +33,60 @@ static-scan:
       tfsec --version
     fi
 
-    TF_STATIC_SCAN_STATUS="${WORKSPACE}/tf-static-scan-status"
-    touch "${TF_STATIC_SCAN_STATUS}"
+    # Connect to IBM cloud to use ibmcloud CLI
+    IBMCLOUD_API=$(get_env ibmcloud-api "https://cloud.ibm.com")
+    DOI_TOOLCHAIN_ID=$(get_env doi-toolchain-id "")
+    TOOLCHAIN_ID=$(get_env TOOLCHAIN_ID)
 
-    mkdir -p "${WORKSPACE}/__tfsec_scan__"
-    TFSEC_DIR="${WORKSPACE}/__tfsec_scan__"
+    if [ "$DOI_IN_TOOLCHAIN" == 0 ]; then
+      if [ -z "$DOI_TOOLCHAIN_ID" ] || [ "$TOOLCHAIN_ID" == "$DOI_TOOLCHAIN_ID" ]; then
+        echo "No Devops Insights integration found in toolchain. Skipping ..."
+      fi
+    fi
+    export DOI_TOOLCHAIN_ID
+    # Default Toolchain ID if needed
+    if [ -z "$DOI_TOOLCHAIN_ID" ]; then
+      DOI_TOOLCHAIN_ID="$TOOLCHAIN_ID"
+    fi
 
+    # Use `doi-ibmcloud-api-key` if present, if not, fall back to `ibmcloud-api-key`
+    ibmcloud_api_key_name="/config/ibmcloud-api-key"
+    if [[ -s "/config/doi-ibmcloud-api-key" ]]; then
+      ibmcloud_api_key_name="/config/doi-ibmcloud-api-key"
+    fi
+    ibmcloud login --apikey @"$ibmcloud_api_key_name" -a "$IBMCLOUD_API" --no-region
+
+    # Create an appropriate data set for the terraform static scan 
+    evidence_name="static-scan"
+    . "${ONE_PIPELINE_PATH}"/internal/doi/helper/create_doi_dataset_file
+
+    dataset_file_path="${WORKSPACE}/doi-evidence/doi-dataset-$evidence_name.json"
+    dataset_label="Evidence of $evidence_name"
+    dataset_name="compliance-${evidence_name}"
+    dataset_file=$(create_doi_dataset_file "$dataset_file_path" "$dataset_label" "$dataset_name")
+
+    ibmcloud doi policies-update \
+      --file "$dataset_file" \
+      --toolchainid "$DOI_TOOLCHAIN_ID" || true
+
+    # Look for the DOI environment
+    doi_environment=$(get_env doi-environment "")
+    environment="dev"
+    if [ "$doi_environment" ]; then
+      environment="$doi_environment"
+    fi
+
+    # Iterate on the application repositorie(s)
     list_repos | while IFS= read -r repo ; do
       url="$(load_repo "$repo" url)"
       sha="$(load_repo "$repo" commit)"
       branch="$(load_repo "$repo" branch)"
       path="$(load_repo "$repo" path)"
 
-      echo "repo=$repo url=$url sha=$sha branch=$branch path=$path"
+      logicalappname="$(get_env doi-logicalappname "$(get_env APP_REPO_NAME)")"
+      buildnumber="$(get_env doi-buildnumber "$BUILD_NUMBER")"
+
+      echo "repo=$repo url=$url logicalappname=$logicalappname sha=$sha branch=$branch path=$path"
 
       tf_vars_file=$(get_env tf_vars_file "")
       if [[ "$tf_vars_file" != "" ]]; then
@@ -55,6 +102,15 @@ static-scan:
       fi
 
       save_result static-scan "${TFSEC_DIR}/${repo}_tfsec_out.json"
+
+      ibmcloud doi publishtestrecord \
+        --toolchainid="$DOI_TOOLCHAIN_ID" \
+        --logicalappname="$logicalappname" \
+        --buildnumber="$buildnumber" \
+        --filelocation="${TFSEC_DIR}/${repo}_tfsec_out.json" \
+        --type="${dataset_name}" \
+        --drilldownurl="${url}" \
+        --env "${environment}" || return 0
 
       echo "*** cat ${TFSEC_DIR}/${repo}_tfsec_out.json ***"
       cat "${TFSEC_DIR}/${repo}_tfsec_out.json"
