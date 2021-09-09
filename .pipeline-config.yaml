@@ -96,26 +96,26 @@ static-scan:
       fi
 
       echo "tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG"
-      tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG --format json > "${TFSEC_DIR}/${repo}_tfsec_out.json"
+      tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG --format junit > "${TFSEC_DIR}/${repo}_tfsec_out"
       tfsec ${WORKSPACE}/${path} $VAR_FILE_ARG 
       exit_code=$?
       if [ $exit_code -ne 0 ]; then
         echo "failure" >> "${TF_STATIC_SCAN_STATUS}"
       fi
 
-      save_result static-scan "${TFSEC_DIR}/${repo}_tfsec_out.json"
+      save_result static-scan "${TFSEC_DIR}/${repo}_tfsec_out"
 
       ibmcloud doi publishtestrecord \
         --toolchainid="$DOI_TOOLCHAIN_ID" \
         --logicalappname="$logicalappname" \
         --buildnumber="$buildnumber" \
-        --filelocation="${TFSEC_DIR}/${repo}_tfsec_out.json" \
+        --filelocation="${TFSEC_DIR}/${repo}_tfsec_out" \
         --type="${dataset_name}" \
         --drilldownurl="${url}" \
         --env "${environment}" || return 0
 
-      echo "*** cat ${TFSEC_DIR}/${repo}_tfsec_out.json ***"
-      cat "${TFSEC_DIR}/${repo}_tfsec_out.json"
+      echo "*** cat ${TFSEC_DIR}/${repo}_tfsec_out ***"
+      cat "${TFSEC_DIR}/${repo}_tfsec_out"
 
     done
 
