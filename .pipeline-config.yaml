@@ -56,6 +56,9 @@ static-scan:
 
       save_result static-scan "${TFSEC_DIR}/${repo}_tfsec_out.json"
 
+      echo "*** cat ${TFSEC_DIR}/${repo}_tfsec_out.json ***"
+      cat "${TFSEC_DIR}/${repo}_tfsec_out.json"
+
     done
 
     echo "exiting accordingly"
