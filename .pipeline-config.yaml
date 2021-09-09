@@ -60,7 +60,7 @@ static-scan:
     evidence_name="static-scan"
     . "${ONE_PIPELINE_PATH}"/internal/doi/helper/create_doi_dataset_file
 
-    dataset_file_path="${WORKSPACE}/doi-evidence/doi-dataset-$evidence_name.json"
+    dataset_file_path="${TFSEC_DIR}/doi-dataset-$evidence_name.json"
     dataset_label="Evidence of $evidence_name"
     dataset_name="compliance-${evidence_name}"
     dataset_file=$(create_doi_dataset_file "$dataset_file_path" "$dataset_label" "$dataset_name")
@@ -68,6 +68,8 @@ static-scan:
     ibmcloud doi policies-update \
       --file "$dataset_file" \
       --toolchainid "$DOI_TOOLCHAIN_ID" || true
+
+    ls -l $TFSEC_DIR
 
     # Look for the DOI environment
     doi_environment=$(get_env doi-environment "")
