@@ -68,3 +68,14 @@ static-scan:
     else
         TF_STATIC_SCAN_RESULTS_STATUS="success"
     fi
+
+sign-artifact:
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0@sha256:e9d8e354668ba3d40be2aaee08298d2aa7f0e1c8a1829cca4094ec93830e3e6a
+  script: |
+      #!/usr/bin/env bash
+      STAGE_DIND="true"
+      STAGE_ABORT_ON_FAILURE="false"
+      STAGE_IMAGE_PULL_POLICY="IfNotPresent"
+      #source scripts/sign_image.sh
+      echo "Nothing to do yet"
