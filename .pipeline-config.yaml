@@ -69,8 +69,6 @@ static-scan:
       --file "$dataset_file" \
       --toolchainid "$DOI_TOOLCHAIN_ID" || true
 
-    ls -l $TFSEC_DIR
-
     # Look for the DOI environment
     doi_environment=$(get_env doi-environment "")
     environment="dev"
@@ -115,12 +113,8 @@ static-scan:
         --drilldownurl="${url}" \
         --env "${environment}" || return 0
 
-      echo "*** cat ${TFSEC_DIR}/${repo}_tfsec_out ***"
-      cat "${TFSEC_DIR}/${repo}_tfsec_out"
-
     done
 
-    echo "exiting accordingly"
     #
     # check if any of the scans failed
     #
@@ -136,8 +130,11 @@ sign-artifact:
   image: icr.io/continuous-delivery/pipeline/image-signing:1.0.0@sha256:e9d8e354668ba3d40be2aaee08298d2aa7f0e1c8a1829cca4094ec93830e3e6a
   script: |
       #!/usr/bin/env bash
-      STAGE_DIND="true"
-      STAGE_ABORT_ON_FAILURE="false"
-      STAGE_IMAGE_PULL_POLICY="IfNotPresent"
-      #source scripts/sign_image.sh
+      echo "Nothing to do yet"
+
+scan-artifact:
+  abort_on_failure: false
+  image: icr.io/continuous-delivery/pipeline/pipeline-base-image:2.12
+  script: |
+      #!/usr/bin/env bash
       echo "Nothing to do yet"
